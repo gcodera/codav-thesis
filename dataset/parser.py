@@ -1,145 +1,160 @@
+import os
+from datetime import date
+
+
+cwd = os.getcwd()
+folders = {
+"":"", 
+"app": ["pid","recent"], 
+"audio": ["ringermode", "volume", "maxvolume"], 
+"hf": ["app", "locked"], 
+"phone": ["activeoperator", "roaming", "servicestate","celllocation", "signal", 
+        "sim", "idle", "ringing"], 
+"power": ["battery", "charger"], 
+"screen": ["brightness", "power"],
+"sms": ["sent","received"],
+"wifi": ["connected", "scancomplete", "scan", "state"]
+
+}
+
+
+def makeDirs(user):
+  for folder in folders:
+    # print "HNGGHH", folder
+    if not os.path.exists(cwd + "/" + str(user) + "/" + folder):
+      os.makedirs(cwd + "/" + str(user) + "/" + folder)
+
+def createOutFiles(user):
+  userout = cwd + "/" + str(user) + "/"
+  outfiles = {
+    'airplane' : open( userout + "airplane.ssv", 'a'),
+  }
+
+  # print folders
+  for folder in folders:
+    for outfile in folders[folder]:
+      outfiles[outfile] = open(userout + folder + "/" + outfile + ".ssv", 'a')
+      # print userout + folder + "/" + outfile + ".ssv"
+
+  return outfiles
+
+def processTimeStamp(line_exbysemi):
+  timestamp = line_exbysemi[2]
+
+  if "invalid" not in line_exbysemi[2]:
+    timestamp = line_exbysemi[2].split('T')
+    day = timestamp[0].split('-')
+    time = timestamp[1].split('.')[0].split(':')
+
+    #reused variable
+    timestamp = (day[1] + " " + day[2] + " " + 
+      str(date(int(day[0]), int(day[1]), int(day[2])).weekday()) + " " + 
+      time[0] + " " + time[1] + " " + time[2] )
+
+  return timestamp + " "
+
+
 
 #iterate from user 1 to 6
-for user in range(1,7):
+for user in range(1,2):
   print "Processing data from User", user 
   
+  # if not os.path.exists(cwd + "/" + str(user)):
+  #   os.makedirs(cwd + "/" + str(user))
+
+  makeDirs(user)  
+  outfiles = createOutFiles(user)
+
   #process each line from <user>.csv
-  for line in open(str(user) + ".csv", 'r'):
+  # for line in open(str(user) + ".csv", 'r'):
+  for line in open("samplelines.csv", 'r'):
     
-    #line exploded by semicolon; parses date, fields, and values, 
-    line_exbysemi = line[:-1].split(';')
+    # line exploded by semicolon; parses date, fields, and values, 
+    line_exbysemi = line.split(';')
 
-    #default value of timestamp
-    timestamp = "invalid date"
+    #string to be printed out; contains just timestamp yet
+    timestamp = processTimeStamp(line_exbysemi)
 
-    #string to be printed out
-    line_out = ""
 
-    #PARSE PER FIELD
+    ############## PARSE PER FIELD ##############
+    
+
+    substr_exbybar = line_exbysemi[3].split('|')
+
+      
     if line_exbysemi[3] == "airplane":
-      line_out = line_exbysemi[4]
-      # print line_out
+      outfiles['airplane'].write(timestamp + line_exbysemi[4])
 
 
     elif "app|" in line_exbysemi[3]:
-      substr_exbybar = line_exbysemi[3].split('|')
-      # print substr_exbybar
-
-      #pid
+        
+      #---- pid
       if substr_exbybar[1].isdigit():
-        if substr_exbybar[2] == "importance":
-          # print line_exbysemi[4]
-          pass #output to importance
-        if substr_exbybar[2] == "name":
-          # print line_exbysemi[4]
-          pass
-        if substr_exbybar[2] == "starttime":
-          # print line_exbysemi[4]
-          pass
+        outfiles['pid'].write(timestamp + substr_exbybar[1] + 
+          " " + substr_exbybar[2] + " " + line_exbysemi[4])
 
-      #recent
       if "recent" in line_exbysemi[3]:
-        substr_exbybar = line_exbysemi[3].split('|')
-
-        print substr_exbybar[2], line_exbysemi[4]
-
-        # pass
+        outfiles['recent'].write(timestamp + substr_exbybar[2] + 
+          " " + line_exbysemi[4])
         # 138394;42017750;2013-01-27T01:03:55.592+0000;app|recent|0;com.cyanogenmod.trebuchet/.Launcher
 
-    elif "audio|" in line_exbysemi[3]:
-      substr_exbybar = line_exbysemi[3].split('|')
-      
-      if "ringermode" == substr_exbybar[1]:
-        # print line_exbysemi[4]
-        pass
-      if "volume" == substr_exbybar[1] or "maxvolume" == substr_exbybar[1]:
-        # store in (substr_exbybar[2] + ".csv") line_exbysemi[4]
-        pass
 
-    # elif line_exbysemi[3] == "conn":
-    #   pass
+    elif "audio|" in line_exbysemi[3]:
+      if "ringermode" == substr_exbybar[1]:
+        outfiles[substr_exbybar[1]].write(timestamp + line_exbysemi[4])
+        
+      if "volume" == substr_exbybar[1] or "maxvolume" == substr_exbybar[1]:
+        outfiles[substr_exbybar[1]].write(timestamp + substr_exbybar[2] + 
+          " " + line_exbysemi[4])
+        # store in (substr_exbybar[2] + ".csv") line_exbysemi[4]
+
 
     elif "hf|" in line_exbysemi[3]:
-      substr_exbybar = line_exbysemi[3].split('|')
-
-      if "app" == substr_exbybar[1]:
-        # print line_exbysemi[4]
-        pass
-      if "locked" == substr_exbybar[1]:
-        # print line_exbysemi[4]
-        pass
-
-    # elif "memorycard|" in line_exbysemi[3]: 
-    #   substr_exbybar = line_exbysemi[3].split('|')
-    #   pass
+      if substr_exbybar[1] in ["locked","app"]:
+        outfiles[substr_exbybar[1]].write(timestamp + line_exbysemi[4])
 
 
-    elif "phone" in line_exbysemi[3]:
-      substr_exbybar = line_exbysemi[3].split('|')
+    elif "phone|" in line_exbysemi[3]:
+      if substr_exbybar[1] in ["servicestate","roaming","activeoperator"]:
+        outfiles[substr_exbybar[1]].write(timestamp + line_exbysemi[4])
+      if substr_exbybar[1] in ["celllocation", "signal", "sim"]:
+        outfiles[substr_exbybar[1]].write(timestamp + substr_exbybar[2] + 
+          " " + line_exbysemi[4])
+      if substr_exbybar[1] in ["idle","ringing"]:
+        outfiles[substr_exbybar[1]].write(timestamp + 
+          ' '.join(line_exbysemi[4].split(',')))
 
-      if "activeoperator" in line_exbysemi[3]:
-        # print line_exbysemi[4]
-        pass
-      if "roaming" in line_exbysemi[3]:
-        # print line_exbysemi[4]
-        pass
-      if "servicestate" in line_exbysemi[3]:
-        # print line_exbysemi[4]
-        pass
-      if "celllocation" in line_exbysemi[3]:
-        # store into substr_exbybar[2] line_exbysemi[4]
-        # print line_exbysemi[4]
-        pass
-      if "signal" in line_exbysemi[3]:
-        # store into substr_exbybar[2] line_exbysemi[4]
-        pass
-      if "sim" in line_exbysemi[3]:
-        # store into substr_exbybar[2] line_exbysemi[4]
-        pass
 
-    elif "power" in line_exbysemi[3]:
-      substr_exbybar = line_exbysemi[3].split('|')
-
+    elif "power|" in line_exbysemi[3]:
       if "battery" == substr_exbybar[1]:
-        # store into substr_exbybar[2] line_exbysemi[4]
-        pass
+        outfiles[substr_exbybar[1]].write(timestamp + substr_exbybar[2] + 
+          " " + line_exbysemi[4])
       if "charger" == substr_exbybar[1]:
-        pass
-        #store line_exbysemi[4] into charger.csv
+        outfiles[substr_exbybar[1]].write(timestamp + line_exbysemi[4])
 
     elif "screen" in line_exbysemi[3]:
-      pass
-      substr_exbybar = line_exbysemi[3].split('|')
       if "brightness" == substr_exbybar[1]:
-        # store into substr_exbybar[2] line_exbysemi[4]
-        pass
+        outfiles[substr_exbybar[1]].write(timestamp + substr_exbybar[2] + 
+          " " + line_exbysemi[4])
       if "power" == substr_exbybar[1]:
-      # store into substr_exbybar[2] line_exbysemi[4]
-        pass
+        outfiles[substr_exbybar[1]].write(timestamp + line_exbysemi[4])
+
       
-    # elif line_exbysemi[3] == "sms":
-    #   pass
+    elif "sms" in line_exbysemi[3]:
+      if substr_exbybar[1] in ["sent","received"]:
+        outfiles[substr_exbybar[1]].write(timestamp + 
+          ' '.join(line_exbysemi[4].split(',')))
+
 
     elif "wifi" in line_exbysemi[3]:
-      pass
-      substr_exbybar = line_exbysemi[3].split('|')
-
-      if "connected" == substr_exbybar[1]:
-        pass
+      if substr_exbybar[1] in ["scan", "connected"]:
+        outfiles[substr_exbybar[1]].write(timestamp + substr_exbybar[2] + 
+          " " + substr_exbybar[3] + " " + line_exbysemi[4])
         # store substr_exbybar[2] (bssid), substr_exbybar[3] (field), line_exbysemi[4](value)
-      if "scancomplete" == substr_exbybar[1]:
-        pass
-        # store line_exbysemi[4]
-      if "scan" == substr_exbybar[1]:
-
-      if "state" == substr_exbybar[1]:
-        pass
-        # store <value> in state.csv
+      elif substr_exbybar[1] in ["scancomplete","state"]:
+        outfiles[substr_exbybar[1]].write(timestamp + line_exbysemi[4])
 
 
-# ------------------
-    if "invalid" not in line:
-      timestamp = line_exbysemi[2].split('T')
-      day = timestamp[0].split('-')
-      time = timestamp[1].split('.')[0].split(':')
 
+  for o in outfiles:
+    outfiles.get(o).close()
